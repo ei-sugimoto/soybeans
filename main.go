@@ -5,24 +5,36 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"syscall"
 
 	"github.com/ei-sugimoto/soybeans/internal"
 )
 
 func main() {
 
-	// Mapping構造体を生成
+	originalHostName, err := os.Hostname()
+	if err != nil {
+		log.Fatalf("ホスト名の取得に失敗しました: %v", err)
+	}
 
 	cmd := exec.Command("/bin/sh")
-	cmd.SysProcAttr = Attribute().SysProcAttr
+
+	config := Mapping()
+	cmd.SysProcAttr = Attribute(config).SysProcAttr
+	if err := PivotRoot(config); err != nil {
+		log.Fatalf("PivotRootの実行に失敗しました: %v", err)
+	}
+
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
 		log.Fatalln("コマンドの実行に失敗しました: ", err)
+		syscall.Sethostname([]byte(originalHostName))
 		os.Exit(1)
 	}
+	syscall.Sethostname([]byte(originalHostName))
 
 	os.Exit(0)
 
@@ -49,16 +61,26 @@ func Mapping() internal.Mapping {
 	return configMap
 }
 
-func Attribute() *internal.Attribute {
-	configMap := Mapping()
+func Attribute(config internal.Mapping) *internal.Attribute {
 
 	attr := internal.NewAttribute()
-	attr.SetUID(configMap.UID(), os.Getuid(), 1)
-	attr.SetGID(configMap.UID(), os.Getgid(), 1)
-	err := attr.SetHostName(configMap.HostName())
+
+	attr.SetFlag(config.NameSpaces())
+
+	attr.SetUID(config.UID(), os.Getuid(), 1)
+	attr.SetGID(config.UID(), os.Getgid(), 1)
+	err := attr.SetHostName(config.HostName())
 	if err != nil {
 		log.Fatalf("ホスト名の設定に失敗しました: %v", err)
 	}
 
 	return attr
+}
+
+func PivotRoot(config internal.Mapping) error {
+	if err := internal.PivotRoot(config.RootPath()); err != nil {
+		return err
+	}
+
+	return nil
 }
