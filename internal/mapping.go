@@ -68,6 +68,13 @@ type Mapping interface {
 	RootPath() string
 	Args() []string
 	Env() []string
+	Mounts() []struct {
+		Destination string   `json:"destination"`
+		Type        string   `json:"type"`
+		Source      string   `json:"source"`
+		Options     []string `json:"options"`
+	}
+	Terminal() bool
 }
 
 type MappingImpl struct {
@@ -116,4 +123,17 @@ func (m *MappingImpl) Args() []string {
 
 func (m *MappingImpl) Env() []string {
 	return m.Config.Process.Env
+}
+
+func (m *MappingImpl) Mounts() []struct {
+	Destination string   `json:"destination"`
+	Type        string   `json:"type"`
+	Source      string   `json:"source"`
+	Options     []string `json:"options"`
+} {
+	return m.Config.Mounts
+}
+
+func (m *MappingImpl) Terminal() bool {
+	return m.Config.Process.Terminal
 }
