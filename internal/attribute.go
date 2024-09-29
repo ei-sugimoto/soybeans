@@ -8,13 +8,32 @@ type Attribute struct {
 
 func NewAttribute() *Attribute {
 	return &Attribute{
-		SysProcAttr: &syscall.SysProcAttr{
-			Cloneflags: syscall.CLONE_NEWIPC | syscall.CLONE_NEWNET | syscall.CLONE_NEWUSER | syscall.CLONE_NEWUTS,
-		},
+		SysProcAttr: &syscall.SysProcAttr{},
+	}
+}
+
+func (a *Attribute) SetFlag(str []string) {
+	for _, s := range str {
+		switch s {
+		case "mount":
+			a.SysProcAttr.Cloneflags |= syscall.CLONE_NEWNS
+		case "pid":
+			a.SysProcAttr.Cloneflags |= syscall.CLONE_NEWPID
+		case "uts":
+			a.SysProcAttr.Cloneflags |= syscall.CLONE_NEWUTS
+		case "ipc":
+			a.SysProcAttr.Cloneflags |= syscall.CLONE_NEWIPC
+		case "network":
+			a.SysProcAttr.Cloneflags |= syscall.CLONE_NEWNET
+		}
 	}
 }
 
 func (a *Attribute) SetUID(ContainerID, HostID, Size int) {
+
+	if a.SysProcAttr.Cloneflags&syscall.CLONE_NEWUSER == 0 {
+		a.SysProcAttr.Cloneflags |= syscall.CLONE_NEWUSER
+	}
 	newUidMappings := []syscall.SysProcIDMap{
 		{
 			ContainerID: ContainerID,
@@ -27,6 +46,10 @@ func (a *Attribute) SetUID(ContainerID, HostID, Size int) {
 }
 
 func (a *Attribute) SetGID(ContainerID, HostID, Size int) {
+	if a.SysProcAttr.Cloneflags&syscall.CLONE_NEWUSER == 0 {
+		a.SysProcAttr.Cloneflags |= syscall.CLONE_NEWUSER
+	}
+
 	newGidMappings := []syscall.SysProcIDMap{
 		{
 			ContainerID: ContainerID,
