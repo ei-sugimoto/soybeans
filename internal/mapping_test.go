@@ -1,6 +1,7 @@
 package internal_test
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/ei-sugimoto/soybeans/internal"
@@ -104,5 +105,9 @@ func TestMapping(t *testing.T) {
 
 	if got, want := mapping.Version(), "1.0.2"; got != want {
 		t.Errorf("Version() = %q; want %q", got, want)
+	}
+
+	if got, want := mapping.NameSpaces(), []string{"pid", "network", "ipc", "uts", "mount"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("NameSpaces() = %v; want %v", got, want)
 	}
 }
