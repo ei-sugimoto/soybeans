@@ -9,7 +9,7 @@ type Attribute struct {
 func NewAttribute() *Attribute {
 	return &Attribute{
 		SysProcAttr: &syscall.SysProcAttr{
-			Cloneflags: syscall.CLONE_NEWIPC | syscall.CLONE_NEWNET | syscall.CLONE_NEWUSER,
+			Cloneflags: syscall.CLONE_NEWIPC | syscall.CLONE_NEWNET | syscall.CLONE_NEWUSER | syscall.CLONE_NEWUTS,
 		},
 	}
 }
@@ -36,4 +36,12 @@ func (a *Attribute) SetGID(ContainerID, HostID, Size int) {
 	}
 
 	a.SysProcAttr.GidMappings = newGidMappings
+}
+
+func (a *Attribute) SetHostName(hostname string) error {
+	if err := syscall.Sethostname([]byte(hostname)); err != nil {
+		return err
+	}
+
+	return nil
 }

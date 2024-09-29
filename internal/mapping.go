@@ -63,6 +63,7 @@ type Mapping interface {
 	Unmarshal([]byte) error
 	Version() string
 	UID() int
+	HostName() string
 }
 
 type MappingImpl struct {
@@ -87,4 +88,8 @@ func (m *MappingImpl) Version() string {
 
 func (m *MappingImpl) UID() int {
 	return m.Config.Process.User.Uid
+}
+
+func (m *MappingImpl) HostName() string {
+	return m.Config.Hostname
 }

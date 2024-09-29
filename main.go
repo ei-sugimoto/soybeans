@@ -55,6 +55,10 @@ func Attribute() *internal.Attribute {
 	attr := internal.NewAttribute()
 	attr.SetUID(configMap.UID(), os.Getuid(), 1)
 	attr.SetGID(configMap.UID(), os.Getgid(), 1)
+	err := attr.SetHostName(configMap.HostName())
+	if err != nil {
+		log.Fatalf("ホスト名の設定に失敗しました: %v", err)
+	}
 
 	return attr
 }
