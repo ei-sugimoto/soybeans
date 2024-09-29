@@ -66,6 +66,8 @@ type Mapping interface {
 	HostName() string
 	NameSpaces() []string
 	RootPath() string
+	Args() []string
+	Env() []string
 }
 
 type MappingImpl struct {
@@ -106,4 +108,12 @@ func (m *MappingImpl) NameSpaces() []string {
 
 func (m *MappingImpl) RootPath() string {
 	return m.Config.Root.Path
+}
+
+func (m *MappingImpl) Args() []string {
+	return m.Config.Process.Args
+}
+
+func (m *MappingImpl) Env() []string {
+	return m.Config.Process.Env
 }

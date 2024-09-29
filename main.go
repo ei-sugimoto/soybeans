@@ -11,19 +11,21 @@ import (
 )
 
 func main() {
+	config := Mapping()
 
 	originalHostName, err := os.Hostname()
 	if err != nil {
 		log.Fatalf("ホスト名の取得に失敗しました: %v", err)
 	}
 
-	cmd := exec.Command("/bin/sh")
+	cmd := exec.Command(config.Args()[0], config.Args()[1:]...)
 
-	config := Mapping()
 	cmd.SysProcAttr = Attribute(config).SysProcAttr
-	if err := PivotRoot(config); err != nil {
-		log.Fatalf("PivotRootの実行に失敗しました: %v", err)
-	}
+	cmd.Env = append(os.Environ(), config.Env()...)
+
+	// if err := PivotRoot(config); err != nil {
+	// 	log.Fatalf("PivotRootの実行に失敗しました: %v", err)
+	// }
 
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
