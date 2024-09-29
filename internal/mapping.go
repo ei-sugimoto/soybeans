@@ -64,6 +64,8 @@ type Mapping interface {
 	Version() string
 	UID() int
 	HostName() string
+	NameSpaces() []string
+	RootPath() string
 }
 
 type MappingImpl struct {
@@ -92,4 +94,16 @@ func (m *MappingImpl) UID() int {
 
 func (m *MappingImpl) HostName() string {
 	return m.Config.Hostname
+}
+
+func (m *MappingImpl) NameSpaces() []string {
+	var namespaces []string
+	for _, ns := range m.Config.Linux.Namespaces {
+		namespaces = append(namespaces, ns.Type)
+	}
+	return namespaces
+}
+
+func (m *MappingImpl) RootPath() string {
+	return m.Config.Root.Path
 }
