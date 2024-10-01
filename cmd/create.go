@@ -11,6 +11,7 @@ import (
 
 	"github.com/ei-sugimoto/soybeans/internal/v2_pkg/Err"
 	"github.com/ei-sugimoto/soybeans/internal/v2_pkg/config"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/spf13/cobra"
 )
 
@@ -69,6 +70,10 @@ to quickly create a Cobra application.`,
 			Owner:     hostname,
 		}
 
+		if err := saveState(stateFilePath, state); err != nil {
+			return fmt.Errorf("failed to save container state: %v", err)
+		}
+
 		return nil
 	},
 }
@@ -76,4 +81,24 @@ to quickly create a Cobra application.`,
 func init() {
 	rootCmd.AddCommand(createCmd)
 
+}
+
+func saveState(path string, state *ContainerState) error {
+	file, err := os.Create(path)
+	if err != nil {
+		return fmt.Errorf("failed to create state file: %v", err)
+	}
+	defer file.Close()
+
+	json := jsoniter.ConfigCompatibleWithStandardLibrary
+	byteValue, err := json.Marshal(state)
+	if err != nil {
+		return fmt.Errorf("failed to marshal state: %v", err)
+	}
+
+	if _, err := file.Write(byteValue); err != nil {
+		return fmt.Errorf("failed to write state file: %v", err)
+	}
+
+	return nil
 }
