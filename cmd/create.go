@@ -4,19 +4,28 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"io"
-	"log"
+	"fmt"
 	"os"
-	"os/exec"
-	"syscall"
+	"path/filepath"
+	"time"
 
-	"github.com/ei-sugimoto/soybeans/internal"
+	"github.com/ei-sugimoto/soybeans/internal/v2_pkg/Err"
+	"github.com/ei-sugimoto/soybeans/internal/v2_pkg/config"
 	"github.com/spf13/cobra"
 )
 
+type ContainerState struct {
+	Id        string `json:"id"`
+	Pid       int    `json:"pid,omitempty"`
+	Status    string `json:"status"`
+	Bundle    string `json:"bundle"`
+	CreatedAt string `json:"createdAt"`
+	Owner     string `json:"owner"`
+}
+
 // createCmd represents the create command
 var createCmd = &cobra.Command{
-	Use:   "create",
+	Use:   "create <container-id>",
 	Short: "A brief description of your command",
 	Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
@@ -26,45 +35,38 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) > 1 {
-
-			return internal.ErrManyArgs
+		var containerID = args[0]
+		if len(args) < 1 {
+			return Err.ManyArgs
+		}
+		containerDir := filepath.Join("/var/lib/soybeans", containerID)
+		if err := os.MkdirAll(containerDir, 0755); err != nil {
+			return fmt.Errorf("failed to create container directory: %v", err)
 		}
 
-		MapConfig := Mapping()
-
-		ContainerCMD := exec.Command(MapConfig.Args()[0], MapConfig.Args()[1:]...)
-
-		if MapConfig.Terminal() {
-			ContainerCMD.Stdin = os.Stdin
-			ContainerCMD.Stdout = os.Stdout
-			ContainerCMD.Stderr = os.Stderr
-		}
-
-		originalHostname, err := os.Hostname()
+		config, err := config.Load("config.json")
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to load config: %v", err)
 		}
 
-		err = syscall.Sethostname([]byte(MapConfig.HostName()))
+		stateFilePath := filepath.Join(containerDir, "state.json")
+		cwd, err := os.Getwd()
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to get current working directory: %v", err)
 		}
 
-		ContainerCMD.SysProcAttr = Attribute(MapConfig).SysProcAttr
-
-		if err := PivotRoot(MapConfig); err != nil {
-			return err
+		hostname, err := os.Hostname()
+		if err != nil {
+			return fmt.Errorf("failed to get hostname: %v", err)
 		}
 
-		ContainerCMD.Env = append(os.Environ(), MapConfig.Env()...)
-
-		if err := internal.SetupCwd(MapConfig); err != nil {
-			return err
-		}
-
-		if err := syscall.Sethostname([]byte(originalHostname)); err != nil {
-			return err
+		state := &ContainerState{
+			Id:        containerID,
+			Pid:       0,
+			Status:    "created",
+			Bundle:    cwd,
+			CreatedAt: time.Now().Format(time.RFC3339),
+			Owner:     hostname,
 		}
 
 		return nil
@@ -74,49 +76,4 @@ to quickly create a Cobra application.`,
 func init() {
 	rootCmd.AddCommand(createCmd)
 
-}
-
-func Mapping() internal.Mapping {
-	file, err := os.Open("config.json")
-	if err != nil {
-		log.Fatalf("ファイルを開けませんでした: %v", err)
-	}
-	defer file.Close()
-
-	// ファイルの内容を読み取る
-	byteValue, err := io.ReadAll(file)
-	if err != nil {
-		log.Fatalf("ファイルを読み取れませんでした: %v", err)
-	}
-
-	configMap := internal.NewMapping()
-	if err := configMap.Unmarshal(byteValue); err != nil {
-		log.Fatalf("JSONのパースに失敗しました: %v", err)
-	}
-
-	return configMap
-}
-
-func Attribute(config internal.Mapping) *internal.Attribute {
-
-	attr := internal.NewAttribute()
-
-	attr.SetFlag(config.NameSpaces())
-
-	attr.SetUID(config.UID(), os.Getuid(), 1)
-	attr.SetGID(config.UID(), os.Getgid(), 1)
-	err := attr.SetHostName(config.HostName())
-	if err != nil {
-		log.Fatalf("ホスト名の設定に失敗しました: %v", err)
-	}
-
-	return attr
-}
-
-func PivotRoot(config internal.Mapping) error {
-	if err := internal.PivotRoot(config.RootPath()); err != nil {
-		return err
-	}
-
-	return nil
 }
