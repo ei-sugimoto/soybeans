@@ -75,6 +75,7 @@ type Mapping interface {
 		Options     []string `json:"options"`
 	}
 	Terminal() bool
+	Cwd() string
 }
 
 type MappingImpl struct {
@@ -136,4 +137,8 @@ func (m *MappingImpl) Mounts() []struct {
 
 func (m *MappingImpl) Terminal() bool {
 	return m.Config.Process.Terminal
+}
+
+func (m *MappingImpl) Cwd() string {
+	return m.Config.Process.Cwd
 }

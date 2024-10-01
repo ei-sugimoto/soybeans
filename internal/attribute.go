@@ -26,6 +26,7 @@ func (a *Attribute) SetFlag(str []string) {
 		case "network":
 			a.SysProcAttr.Cloneflags |= syscall.CLONE_NEWNET
 		}
+
 	}
 }
 
