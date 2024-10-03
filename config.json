@@ -209,7 +209,7 @@
 				"SCMP_ARCH_X86",
 				"SCMP_ARCH_X32"
 			],
-			"syscalls": [
+			"unixs": [
 				{
 					"names": [
 						"accept",
@@ -403,7 +403,7 @@
 						"rename",
 						"renameat",
 						"renameat2",
-						"restart_syscall",
+						"restart_unix",
 						"rmdir",
 						"rt_sigaction",
 						"rt_sigpending",

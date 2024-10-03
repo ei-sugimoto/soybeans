@@ -40,10 +40,10 @@ type TConfig struct {
 		ApparmorProfile string `json:"apparmorProfile"`
 		Seccomp         struct {
 			DefaultAction string `json:"defaultAction"`
-			Syscalls      []struct {
+			unixs         []struct {
 				Names  []string `json:"names"`
 				Action string   `json:"action"`
-			} `json:"syscalls"`
+			} `json:"unixs"`
 		} `json:"seccomp"`
 	} `json:"linux"`
 	Hooks struct {

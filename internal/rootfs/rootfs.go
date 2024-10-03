@@ -3,12 +3,13 @@ package rootfs
 import (
 	"fmt"
 	"os"
-	"syscall"
+
+	"golang.org/x/sys/unix"
 )
 
 func PivotRoot(newRoot string) error {
 	// Bind mount newRoot to itself to ensure it's a mount point.
-	if err := syscall.Mount(newRoot, newRoot, "", syscall.MS_BIND|syscall.MS_REC, ""); err != nil {
+	if err := unix.Mount(newRoot, newRoot, "", unix.MS_BIND|unix.MS_REC, ""); err != nil {
 		return fmt.Errorf("failed to bind mount new root: %v", err)
 	}
 
@@ -19,22 +20,22 @@ func PivotRoot(newRoot string) error {
 	}
 
 	// Change directory to new root.
-	if err := syscall.Chdir(newRoot); err != nil {
+	if err := unix.Chdir(newRoot); err != nil {
 		return fmt.Errorf("failed to change directory to new root: %v", err)
 	}
 
 	// Perform the pivot_root.
-	if err := syscall.PivotRoot(".", putOld); err != nil {
+	if err := unix.PivotRoot(".", putOld); err != nil {
 		return fmt.Errorf("pivot_root failed: %v", err)
 	}
 
 	// Change the current working directory to the new root.
-	if err := syscall.Chdir("/"); err != nil {
+	if err := unix.Chdir("/"); err != nil {
 		return fmt.Errorf("failed to change directory to new root: %v", err)
 	}
 
 	// Unmount the old root.
-	if err := syscall.Unmount("/"+putOld, syscall.MNT_DETACH); err != nil {
+	if err := unix.Unmount("/"+putOld, unix.MNT_DETACH); err != nil {
 		return fmt.Errorf("failed to unmount old root: %v", err)
 	}
 

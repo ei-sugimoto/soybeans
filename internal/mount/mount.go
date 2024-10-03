@@ -1,9 +1,8 @@
 package mount
 
 import (
-	"syscall"
-
 	"github.com/ei-sugimoto/soybeans/internal/config"
+	"golang.org/x/sys/unix"
 )
 
 func Mount(config config.TConfig) error {
@@ -17,7 +16,7 @@ func Mount(config config.TConfig) error {
 			}
 		}
 
-		if err := syscall.Mount(m.Source, m.Destination, m.Type, syscall.MS_BIND, options); err != nil {
+		if err := unix.Mount(m.Source, m.Destination, m.Type, unix.MS_BIND, options); err != nil {
 			return err
 		}
 	}

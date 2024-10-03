@@ -5,6 +5,7 @@ go 1.23.1
 require (
 	github.com/json-iterator/go v1.1.12
 	github.com/spf13/cobra v1.8.1
+	golang.org/x/sys v0.25.0
 )
 
 require (
