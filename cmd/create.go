@@ -9,8 +9,10 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/ei-sugimoto/soybeans/internal/v2_pkg/Err"
-	"github.com/ei-sugimoto/soybeans/internal/v2_pkg/config"
+	"github.com/ei-sugimoto/soybeans/internal/Err"
+	"github.com/ei-sugimoto/soybeans/internal/config"
+	"github.com/ei-sugimoto/soybeans/internal/mount"
+	"github.com/ei-sugimoto/soybeans/internal/rootfs"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/spf13/cobra"
 )
@@ -63,7 +65,7 @@ to quickly create a Cobra application.`,
 
 		state := &ContainerState{
 			Id:        containerID,
-			Pid:       0,
+			Pid:       os.Getpid(),
 			Status:    "created",
 			Bundle:    cwd,
 			CreatedAt: time.Now().Format(time.RFC3339),
@@ -72,6 +74,14 @@ to quickly create a Cobra application.`,
 
 		if err := saveState(stateFilePath, state); err != nil {
 			return fmt.Errorf("failed to save container state: %v", err)
+		}
+
+		if err := rootfs.PivotRoot(config.Root.Path); err != nil {
+			return fmt.Errorf("failed to pivot root: %v", err)
+		}
+
+		if err := mount.Mount(*config); err != nil {
+			return fmt.Errorf("failed to mount: %v", err)
 		}
 
 		return nil
