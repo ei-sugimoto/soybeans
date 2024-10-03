@@ -1,6 +1,5 @@
-.PHONY run:
-run:
+.PHONY build:
+build:
 	@echo "build..."
 	@go build .
-	@echo "run..."
-	@sudo ./soybeans
+	@sudo cp ./soybeans /usr/local/bin/soybeans

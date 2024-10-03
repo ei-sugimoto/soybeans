@@ -40,7 +40,7 @@ type TConfig struct {
 		ApparmorProfile string `json:"apparmorProfile"`
 		Seccomp         struct {
 			DefaultAction string `json:"defaultAction"`
-			unixs         []struct {
+			Unixs         []struct {
 				Names  []string `json:"names"`
 				Action string   `json:"action"`
 			} `json:"unixs"`
