@@ -13,6 +13,7 @@ import (
 	"github.com/ei-sugimoto/soybeans/internal/config"
 	"github.com/ei-sugimoto/soybeans/internal/mount"
 	"github.com/ei-sugimoto/soybeans/internal/rootfs"
+	"github.com/ei-sugimoto/soybeans/internal/util"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/spf13/cobra"
 )
@@ -43,24 +44,23 @@ to quickly create a Cobra application.`,
 			return Err.ManyArgs
 		}
 		containerDir := filepath.Join("/var/lib/soybeans", containerID)
-		if err := os.MkdirAll(containerDir, 0755); err != nil {
-			return fmt.Errorf("failed to create container directory: %v", err)
-		}
+
+		util.Must(os.MkdirAll(containerDir, 0755))
 
 		config, err := config.Load("config.json")
 		if err != nil {
-			return fmt.Errorf("failed to load config: %v", err)
+			util.Must(err)
 		}
 
 		stateFilePath := filepath.Join(containerDir, "state.json")
 		cwd, err := os.Getwd()
 		if err != nil {
-			return fmt.Errorf("failed to get current working directory: %v", err)
+			util.Must(err)
 		}
 
 		hostname, err := os.Hostname()
 		if err != nil {
-			return fmt.Errorf("failed to get hostname: %v", err)
+			util.Must(err)
 		}
 
 		state := &ContainerState{
@@ -72,17 +72,11 @@ to quickly create a Cobra application.`,
 			Owner:     hostname,
 		}
 
-		if err := saveState(stateFilePath, state); err != nil {
-			return fmt.Errorf("failed to save container state: %v", err)
-		}
+		util.Must(saveState(stateFilePath, state))
 
-		if err := rootfs.PivotRoot(config.Root.Path); err != nil {
-			return fmt.Errorf("failed to pivot root: %v", err)
-		}
+		util.Must(rootfs.PivotRoot(config.Root.Path))
 
-		if err := mount.Mount(*config); err != nil {
-			return fmt.Errorf("failed to mount: %v", err)
-		}
+		util.Must(mount.Mount(*config))
 
 		return nil
 	},
