@@ -52,7 +52,6 @@ to quickly create a Cobra application.`,
 			}
 
 			util.Must(rootfs.PivotRoot(config.Root.Path))
-			util.Must(rootfs.AfterUnmount())
 			util.Must(mount.Mount(*config))
 
 			log.Println("finished pivot_root and mount")

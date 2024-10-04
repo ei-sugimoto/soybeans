@@ -36,22 +36,3 @@ func PivotRoot(newRoot string) error {
 
 	return nil
 }
-
-func AfterUnmount() error {
-	// 6. カレントディレクトリをルートに変更
-	if err := unix.Chdir("/"); err != nil {
-		return fmt.Errorf("failed to change directory to new root: %v", err)
-	}
-
-	// 7. 古いルートをアンマウント
-	if err := unix.Unmount("/.pivot_root", unix.MNT_DETACH); err != nil {
-		return fmt.Errorf("failed to unmount old root: %v", err)
-	}
-
-	// 8. 古いルートディレクトリを削除
-	if err := os.RemoveAll("/.pivot_root"); err != nil {
-		return fmt.Errorf("failed to remove old root directory: %v", err)
-	}
-
-	return nil
-}
