@@ -7,15 +7,11 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
+	"syscall"
 	"time"
 
-	"github.com/ei-sugimoto/soybeans/internal/Err"
-	"github.com/ei-sugimoto/soybeans/internal/attribute"
 	"github.com/ei-sugimoto/soybeans/internal/config"
-	"github.com/ei-sugimoto/soybeans/internal/mount"
-	"github.com/ei-sugimoto/soybeans/internal/rootfs"
 	"github.com/ei-sugimoto/soybeans/internal/util"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/spf13/cobra"
@@ -45,22 +41,12 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if os.Getenv("REEXEC") == "true" {
-			config, err := config.Load("config.json")
-			if err != nil {
-				util.Must(err)
-			}
-
-			util.Must(rootfs.PivotRoot(config.Root.Path))
-			util.Must(mount.Mount(*config))
-
-			log.Println("finished pivot_root and mount")
+		if len(args) < 1 {
+			fmt.Println("container id is required")
 			return nil
 		}
-		var containerID = args[0]
-		if len(args) < 1 {
-			return Err.ManyArgs
-		}
+		containerID := args[0]
+
 		containerDir := filepath.Join("/var/lib/soybeans", containerID)
 
 		util.Must(os.MkdirAll(containerDir, 0755))
@@ -90,32 +76,53 @@ to quickly create a Cobra application.`,
 			Owner:     hostname,
 		}
 
-		util.Must(saveState(stateFilePath, state))
-		// linuxに関する設定がない場合には、Unsahreを呼び出す
-		if len(config.Linux.Namespaces) == 0 {
-			log.Println("exec unshare")
-			util.Must(unix.Unshare(unix.CLONE_NEWNS))
-			util.Must(rootfs.PivotRoot(config.Root.Path))
-			util.Must(mount.Mount(*config))
-
-		} else {
-			newCmd := exec.Command("/proc/self/exe", os.Args[1:]...)
-			newCmd.Stdout = os.Stdout
-			newCmd.Stderr = os.Stderr
-			newCmd.Env = append(os.Environ(), "REEXEC=true")
-
-			attribute.Attribute(newCmd, config)
-			if err := newCmd.Start(); err != nil {
-				log.Fatalf("Failed to start command: %v", err)
-			}
-
-			log.Printf("Running %v with pid %d\n", newCmd.Args, newCmd.Process.Pid)
-			if err := newCmd.Wait(); err != nil {
-				log.Fatalf("Command did not complete successfully: %v", err)
-			}
-
+		argv := append([]string{"/proc/self/exe", "init"}, config.Process.Args...)
+		pid, err := syscall.ForkExec("/proc/self/exe", argv, &syscall.ProcAttr{
+			Env: config.Process.Env,
+			Dir: cwd,
+			Sys: &syscall.SysProcAttr{
+				Cloneflags: syscall.CLONE_NEWNS | syscall.CLONE_NEWUTS | syscall.CLONE_NEWPID | syscall.CLONE_NEWIPC | syscall.CLONE_NEWNET | syscall.CLONE_NEWUSER,
+				Setsid:     true,
+				UidMappings: []syscall.SysProcIDMap{
+					{
+						ContainerID: config.Process.User.UID,
+						HostID:      os.Geteuid(),
+						Size:        1,
+					},
+				},
+				GidMappings: []syscall.SysProcIDMap{
+					{
+						ContainerID: config.Process.User.GID,
+						HostID:      os.Getegid(),
+						Size:        1,
+					},
+				},
+				Credential: &syscall.Credential{
+					Uid: 0,
+					Gid: 0,
+				},
+				AmbientCaps: []uintptr{unix.CAP_SYS_ADMIN},
+			},
+			Files: []uintptr{0, 1, 2},
+		})
+		if err != nil {
+			util.Must(err)
 		}
 
+		fmt.Printf("Started process with PID %d\n", pid)
+		log.Println("argv:", argv)
+		if err := syscall.Kill(pid, syscall.SIGSTOP); err != nil {
+			panic(fmt.Sprintf("Failed to stop process: %v", err))
+		}
+
+		state.Pid = pid
+		if err := syscall.Kill(pid, 0); err != nil {
+			log.Fatalf("Process with PID %d does not exist: %v", pid, err)
+		}
+
+		util.Must(saveState(stateFilePath, state))
+
+		// ルートファイルシステムのピボット
 		return nil
 	},
 }

@@ -1,13 +1,15 @@
 /*
 Copyright © 2024 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
 import (
-	"fmt"
+	"path/filepath"
+	"syscall"
 
+	"github.com/ei-sugimoto/soybeans/internal/util"
 	"github.com/spf13/cobra"
+	"golang.org/x/sys/unix"
 )
 
 // startCmd represents the start command
@@ -21,7 +23,19 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("start called")
+		containerID := args[0]
+
+		containerDir := filepath.Join("/var/lib/soybeans", containerID)
+		state, err := loadState(containerDir)
+		if err != nil {
+			util.Must(err)
+		}
+
+		pid := state.Pid
+		if err := syscall.Kill(pid, unix.SIGCONT); err != nil {
+			util.Must(err)
+		}
+
 	},
 }
 
